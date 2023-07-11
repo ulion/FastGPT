@@ -107,7 +107,9 @@ export async function appKbSearch({
   const res: any = await PgClient.query(
     `BEGIN;
     SET LOCAL ivfflat.probes = ${global.systemEnv.pgIvfflatProbe || 10};
-    select id,q,a,source from modelData where kb_id IN (${model.chat.relatedKbs
+    select id,q,a,source,(vector <#> '[${
+      promptVector[0]
+    }]') * -1 AS score from modelData where kb_id IN (${model.chat.relatedKbs
       .map((item) => `'${item}'`)
       .join(',')}) AND vector <#> '[${promptVector[0]}]' < -${similarity} order by vector <#> '[${
       promptVector[0]
