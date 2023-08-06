@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     );
 
     if (!authTimes) {
-      throw new Error('上次导出未到半小时，每半小时仅可导出一次。');
+      // throw new Error('上次导出未到半小时，每半小时仅可导出一次。');
     }
 
     // 统计数据
