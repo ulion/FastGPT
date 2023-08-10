@@ -20,7 +20,7 @@ import MyIcon from '@/components/Icon';
 
 export type FormData = { dataId?: string; a: string; q: string };
 
-function countLength(str) {
+function countLength(str: string) {
   let count = 0;
   let isPrevCharWordChar = false;
 
