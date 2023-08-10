@@ -20,6 +20,32 @@ import MyIcon from '@/components/Icon';
 
 export type FormData = { dataId?: string; a: string; q: string };
 
+function countLength(str) {
+  let count = 0;
+  let isPrevCharWordChar = false;
+
+  for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+
+      // 检查字符是否为字母或数字
+      if ((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9')) {
+          // 如果之前的字符不是字母或数字，则单词数+1
+          if (!isPrevCharWordChar) {
+              count++;
+          }
+          isPrevCharWordChar = true;
+      } else {
+          // 如果字符不是空白字符，count + 1
+          if (char !== ' ' && char !== '\t' && char !== '\n' && char !== '\r') {
+              count++;
+          }
+          isPrevCharWordChar = false;
+      }
+  }
+
+  return count;
+}
+
 const InputDataModal = ({
   onClose,
   onSuccess,
@@ -48,7 +74,7 @@ const InputDataModal = ({
    */
   const sureImportData = useCallback(
     async (e: FormData) => {
-      if (e.a.length + e.q.length >= 3000) {
+      if (countLength(e.a) + countLength(e.q) >= 3000) {
         toast({
           title: '总长度超长了',
           status: 'warning'
@@ -150,7 +176,7 @@ const InputDataModal = ({
           <Box flex={1} mr={[0, 4]} mb={[4, 0]} h={['50%', '100%']}>
             <Box h={'30px'}>{'匹配的知识点'}</Box>
             <Textarea
-              placeholder={'匹配的知识点。这部分内容会被搜索，请把控内容的质量。总和最多 3000 字。'}
+              placeholder={'匹配的知识点。这部分内容会被搜索，请把控内容的质量。总和最多 3000 字/单词。'}
               maxLength={3000}
               resize={'none'}
               h={'calc(100% - 30px)'}
@@ -163,9 +189,9 @@ const InputDataModal = ({
             <Box h={'30px'}>补充知识</Box>
             <Textarea
               placeholder={
-                '补充知识。这部分内容不会被搜索，但会作为"匹配的知识点"的内容补充，你可以讲一些细节的内容填写在这里。总和最多 3000 字。'
+                '补充知识。这部分内容不会被搜索，但会作为"匹配的知识点"的内容补充，你可以讲一些细节的内容填写在这里。总和最多 3000 字/单词。'
               }
-              maxLength={3000}
+              maxLength={21800}
               resize={'none'}
               h={'calc(100% - 30px)'}
               {...register('a')}
