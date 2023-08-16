@@ -104,7 +104,7 @@ const DataCard = ({ kbId }: { kbId: string }) => {
           filename: 'data.csv'
         });
         toast({
-          title: '导出成功，下次导出需要半小时后',
+          title: '导出成功',
           status: 'success'
         });
       } catch (error) {
@@ -163,7 +163,7 @@ const DataCard = ({ kbId }: { kbId: string }) => {
             mr={2}
             size={'sm'}
             isLoading={isLoadingExport || isLoading}
-            title={'半小时仅能导出1次'}
+            // title={'半小时仅能导出1次'}
             onClick={() => onclickExport()}
           >
             导出csv
