@@ -36,7 +36,7 @@ const SelectJsonModal = ({
   const [selecting, setSelecting] = useState(false);
   const { toast } = useToast();
   const { File, onOpen } = useSelectFile({ fileType: '.csv', multiple: false });
-  const [fileData, setFileData] = useState<{ q: string; a: string }[]>([]);
+  const [fileData, setFileData] = useState<{ q: string; a: string; source?: string }[]>([]);
   const [fileName, setFileName] = useState('');
   const [successData, setSuccessData] = useState(0);
   const { openConfirm, ConfirmChild } = useConfirm({
@@ -54,7 +54,11 @@ const SelectJsonModal = ({
           throw new Error('csv 文件格式有误');
         }
         setFileData(
-          data.map((item) => ({
+          data.map((item) => (header[2] === 'source' && item[2] ? {
+            q: item[0] || '',
+            a: item[1] || '',
+            source: item[2]
+          } : {
             q: item[0] || '',
             a: item[1] || ''
           }))
@@ -83,7 +87,7 @@ const SelectJsonModal = ({
           kbId,
           data: fileData.slice(i, i + step).map((item) => ({
             ...item,
-            source: fileName
+            source: fileName + (item.source ? ` - ${item.source}` : '')
           })),
           mode: TrainingModeEnum.index
         });
