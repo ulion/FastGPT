@@ -85,6 +85,7 @@ export async function appKbSearch({
   userId,
   fixedQuote = [],
   prompt,
+  distinctSource,
   similarity = 0.8,
   limit = 5
 }: {
@@ -92,6 +93,7 @@ export async function appKbSearch({
   userId: string;
   fixedQuote?: QuoteItemType[];
   prompt: ChatItemType;
+  distinctSource?: boolean;
   similarity: number;
   limit: number;
 }): Promise<Response> {
@@ -111,13 +113,22 @@ export async function appKbSearch({
       promptVector[0]
     }]') * -1 AS score from modelData where kb_id IN (${model.chat.relatedKbs
       .map((item) => `'${item}'`)
-      .join(',')}) AND vector <#> '[${promptVector[0]}]' < -${similarity} order by vector <#> '[${
-      promptVector[0]
-    }]' limit ${limit};
+      .join(',')}) AND vector <#> '[${promptVector[0]}]' < -${similarity} order by score desc limit ${distinctSource ? limit * 5 : limit};
     COMMIT;`
   );
 
-  const searchRes: QuoteItemType[] = res?.[2]?.rows || [];
+  let searchRes: QuoteItemType[] = res?.[2]?.rows || [];
+
+  if (distinctSource) {
+    const sourceSet = new Set<any>();
+    searchRes = searchRes.filter((item) => {
+      if (sourceSet.has(item.source)) {
+        return false;
+      }
+      sourceSet.add(item.source);
+      return true;
+    });
+  }
 
   // filter same search result
   const idSet = new Set<string>();
