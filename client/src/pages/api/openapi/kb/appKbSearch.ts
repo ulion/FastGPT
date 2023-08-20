@@ -127,7 +127,7 @@ export async function appKbSearch({
       }
       sourceSet.add(item.source);
       return true;
-    });
+    }).slice(0, limit);
   }
 
   // filter same search result
