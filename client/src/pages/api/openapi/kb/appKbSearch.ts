@@ -19,6 +19,7 @@ export type QuoteItemType = {
 };
 type Props = {
   prompts: ChatItemType[];
+  distinctSource?: boolean;
   similarity: number;
   limit: number;
   appId: string;
@@ -47,7 +48,7 @@ export default withNextCors(async function handler(req: NextApiRequest, res: Nex
       throw new Error('userId is empty');
     }
 
-    const { prompts, similarity, limit, appId } = req.body as Props;
+    const { prompts, distinctSource, similarity, limit, appId } = req.body as Props;
 
     if (!similarity || !Array.isArray(prompts) || !appId) {
       throw new Error('params is error');
@@ -64,6 +65,7 @@ export default withNextCors(async function handler(req: NextApiRequest, res: Nex
       userId,
       fixedQuote: [],
       prompt: prompts[prompts.length - 1],
+      distinctSource,
       similarity,
       limit
     });
