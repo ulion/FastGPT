@@ -1,6 +1,7 @@
-### Fast GPT V3.9
+### Fast GPT V4.1
 
-1. 新增 - 直接分段训练，可调节段落大小。
-2. 优化 - tokens 计算性能。
-3. 优化 - key 池管理，结合 one-api 项目，实现更方便的 key 池管理，具体参考[docker 部署 FastGpt](https://github.com/labring/FastGPT/blob/main/docs/deploy/docker.md)
-4. 新增 - V2 版 OpenAPI，可以在任意第三方套壳 ChatGpt 项目中直接使用 FastGpt 的应用，注意！是直接，不需要改任何代码。具体参考[API 文档中《在第三方应用中使用 FastGpt》](https://kjqvjse66l.feishu.cn/docx/DmLedTWtUoNGX8xui9ocdUEjnNh)
+1. 新增 - 高级编排导入导出功能
+2. 优化对话存储结构
+3. 优化日志存储
+4. [点击查看高级编排介绍文档](https://doc.fastgpt.run/docs/category/flow-modules)
+5. 填写个人 OpenAI 账号后，分享和 API 功能也不会走平台余额扣费。

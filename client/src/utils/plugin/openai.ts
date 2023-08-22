@@ -2,7 +2,6 @@ import { encoding_for_model } from '@dqbd/tiktoken';
 import type { ChatItemType } from '@/types/chat';
 import { ChatRoleEnum } from '@/constants/chat';
 import { ChatCompletionRequestMessageRoleEnum } from 'openai';
-import { OpenAiChatEnum } from '@/constants/model';
 import axios from 'axios';
 import type { MessageItemType } from '@/pages/api/openapi/v1/chat/completions';
 
@@ -42,7 +41,7 @@ export const adaptChatItem_openAI = ({
     [ChatRoleEnum.System]: ChatCompletionRequestMessageRoleEnum.System
   };
   return messages.map((item) => ({
-    ...(reserveId && { _id: item._id }),
+    ...(reserveId && { dataId: item.dataId }),
     role: map[item.obj] || ChatCompletionRequestMessageRoleEnum.System,
     content: item.value || ''
   }));
@@ -50,10 +49,10 @@ export const adaptChatItem_openAI = ({
 
 export function countOpenAIToken({
   messages,
-  model
+  model = 'gpt-3.5-turbo'
 }: {
   messages: ChatItemType[];
-  model: `${OpenAiChatEnum}`;
+  model?: string;
 }) {
   const diffVal = model.startsWith('gpt-3.5-turbo') ? 3 : 2;
 
@@ -69,15 +68,7 @@ export function countOpenAIToken({
   return token;
 }
 
-export const openAiSliceTextByToken = ({
-  model = OpenAiChatEnum.GPT35,
-  text,
-  length
-}: {
-  model: `${OpenAiChatEnum}`;
-  text: string;
-  length: number;
-}) => {
+export const openAiSliceTextByToken = ({ text, length }: { text: string; length: number }) => {
   const enc = getOpenAiEncMap();
   const encodeText = enc.encode(text);
   const decoder = new TextDecoder();

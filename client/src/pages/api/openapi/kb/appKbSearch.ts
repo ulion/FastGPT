@@ -4,12 +4,13 @@ import { authUser } from '@/service/utils/auth';
 import { PgClient } from '@/service/pg';
 import { withNextCors } from '@/service/utils/tools';
 import type { ChatItemType } from '@/types/chat';
-import type { ModelSchema } from '@/types/mongoSchema';
-import { authModel } from '@/service/utils/auth';
-import { ChatModelMap } from '@/constants/model';
+import type { AppSchema } from '@/types/mongoSchema';
+import { authApp } from '@/service/utils/auth';
+// import { ChatModelMap } from '@/constants/model';
 import { ChatRoleEnum } from '@/constants/chat';
-import { openaiEmbedding } from '../plugin/openaiEmbedding';
+import { getVector } from '../plugin/vector';
 import { modelToolMap } from '@/utils/plugin';
+import { PgTrainingTableName } from '@/constants/plugin';
 
 export type QuoteItemType = {
   id: string;
@@ -55,13 +56,13 @@ export default withNextCors(async function handler(req: NextApiRequest, res: Nex
     }
 
     // auth model
-    const { model } = await authModel({
-      modelId: appId,
+    const { app } = await authApp({
+      appId,
       userId
     });
 
     const result = await appKbSearch({
-      model,
+      app,
       userId,
       fixedQuote: [],
       prompt: prompts[prompts.length - 1],
@@ -83,7 +84,8 @@ export default withNextCors(async function handler(req: NextApiRequest, res: Nex
 });
 
 export async function appKbSearch({
-  model,
+  app,
+  model = 'text-embedding-ada-002',
   userId,
   fixedQuote = [],
   prompt,
@@ -91,7 +93,8 @@ export async function appKbSearch({
   similarity = 0.8,
   limit = 5
 }: {
-  model: ModelSchema;
+  app: AppSchema;
+  model?: string;
   userId: string;
   fixedQuote?: QuoteItemType[];
   prompt: ChatItemType;
@@ -99,11 +102,19 @@ export async function appKbSearch({
   similarity: number;
   limit: number;
 }): Promise<Response> {
-  const modelConstantsData = ChatModelMap[model.chat.chatModel];
+  const modelConstantsData = {
+    // chatModel: OpenAiChatEnum.GPT35,
+    name: 'Gpt35-4k',
+    contextMaxToken: 4000,
+    systemMaxToken: 2400,
+    maxTemperature: 1.2,
+    price: 1.5
+  } // ChatModelMap[app.chat?.chatModel];
 
   // get vector
-  const promptVector = await openaiEmbedding({
+  const promptVector = await getVector({
     userId,
+    model,
     input: [prompt.value]
   });
 
@@ -113,7 +124,7 @@ export async function appKbSearch({
     SET LOCAL ivfflat.probes = ${global.systemEnv.pgIvfflatProbe || 10};
     select id,q,a,source,(vector <#> '[${
       promptVector[0]
-    }]') * -1 AS score from modelData where kb_id IN (${model.chat.relatedKbs
+    }]') * -1 AS score from ${PgTrainingTableName} where kb_id IN (${app.chat?.relatedKbs
       .map((item) => `'${item}'`)
       .join(',')}) AND vector <#> '[${promptVector[0]}]' < -${similarity} order by score desc limit ${distinctSource ? limit * 5 : limit};
     COMMIT;`
@@ -148,32 +159,32 @@ export async function appKbSearch({
   });
 
   // 计算固定提示词的 token 数量
-  const userSystemPrompt = model.chat.systemPrompt // user system prompt
+  const userSystemPrompt = app.chat?.systemPrompt // user system prompt
     ? [
         {
           obj: ChatRoleEnum.System,
-          value: model.chat.systemPrompt
+          value: app.chat.systemPrompt
         }
       ]
     : [];
   const userLimitPrompt = [
     {
       obj: ChatRoleEnum.Human,
-      value: model.chat.limitPrompt
-        ? model.chat.limitPrompt
-        : `知识库是关于 ${model.name} 的内容，参考知识库回答问题。与 "${model.name}" 无关内容，直接回复: "我不知道"。`
+      value: app.chat?.limitPrompt
+        ? app.chat.limitPrompt
+        : `知识库是关于 ${app.name} 的内容，参考知识库回答问题。与 "${app.name}" 无关内容，直接回复: "我不知道"。`
     }
   ];
 
   const fixedSystemTokens = modelToolMap.countTokens({
-    model: model.chat.chatModel,
+    model: app.chat?.chatModel,
     messages: [...userSystemPrompt, ...userLimitPrompt]
   });
 
   // filter part quote by maxToken
   const sliceResult = modelToolMap
     .tokenSlice({
-      model: model.chat.chatModel,
+      model: app.chat?.chatModel,
       maxToken: modelConstantsData.systemMaxToken - fixedSystemTokens,
       messages: filterSearch.map((item, i) => ({
         obj: ChatRoleEnum.System,

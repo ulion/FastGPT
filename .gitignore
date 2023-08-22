@@ -5,6 +5,7 @@ node_modules/
 out/
 # production
 build/
+.astro/
 
 # misc
 .DS_Store
@@ -29,3 +30,7 @@ platform.json
 testApi/
 local/
 dist/
+
+# hugo
+**/.hugo_build.lock
+docSite/public/

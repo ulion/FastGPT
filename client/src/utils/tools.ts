@@ -1,15 +1,21 @@
 import crypto from 'crypto';
 import { useToast } from '@/hooks/useToast';
 import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 
 /**
  * copy text data
  */
 export const useCopyData = () => {
+  const { t } = useTranslation();
   const { toast } = useToast();
 
   return {
-    copyData: async (data: string, title: string = '复制成功') => {
+    copyData: async (
+      data: string,
+      title: string | null = t('common.Copy Successful'),
+      duration = 1000
+    ) => {
       try {
         if (navigator.clipboard) {
           await navigator.clipboard.writeText(data);
@@ -28,7 +34,7 @@ export const useCopyData = () => {
       toast({
         title,
         status: 'success',
-        duration: 1000
+        duration
       });
     }
   };
@@ -51,6 +57,36 @@ export const Obj2Query = (obj: Record<string, string | number>) => {
     queryParams.append(key, `${obj[key]}`);
   }
   return queryParams.toString();
+};
+
+export const parseQueryString = (str: string) => {
+  const queryObject: Record<string, any> = {};
+
+  const splitStr = str.split('?');
+
+  str = splitStr[1] || splitStr[0];
+
+  // 将字符串按照 '&' 分割成键值对数组
+  const keyValuePairs = str.split('&');
+
+  // 遍历键值对数组，将每个键值对解析为对象的属性和值
+  keyValuePairs.forEach(function (keyValuePair) {
+    const pair = keyValuePair.split('=');
+    const key = decodeURIComponent(pair[0]);
+    const value = decodeURIComponent(pair[1] || '');
+
+    // 如果对象中已经存在该属性，则将值转换为数组
+    if (queryObject.hasOwnProperty(key)) {
+      if (!Array.isArray(queryObject[key])) {
+        queryObject[key] = [queryObject[key]];
+      }
+      queryObject[key].push(value);
+    } else {
+      queryObject[key] = value;
+    }
+  });
+
+  return queryObject;
 };
 
 /**
@@ -113,6 +149,9 @@ export const voiceBroadcast = ({ text }: { text: string }) => {
   return {
     cancel: () => window.speechSynthesis?.cancel()
   };
+};
+export const cancelBroadcast = () => {
+  window.speechSynthesis?.cancel();
 };
 
 export const getErrText = (err: any, def = '') => {

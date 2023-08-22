@@ -4,17 +4,17 @@ import { connectToDatabase, TrainingData } from '@/service/mongo';
 import { authUser } from '@/service/utils/auth';
 import { authKb } from '@/service/utils/auth';
 import { withNextCors } from '@/service/utils/tools';
-import { TrainingModeEnum } from '@/constants/plugin';
+import { PgTrainingTableName, TrainingModeEnum } from '@/constants/plugin';
 import { startQueue } from '@/service/utils/tools';
 import { PgClient } from '@/service/pg';
 import { modelToolMap } from '@/utils/plugin';
-import { OpenAiChatEnum } from '@/constants/model';
 
-type DateItemType = { a: string; q: string; source?: string };
+export type DateItemType = { a: string; q: string; source?: string };
 
 export type Props = {
   kbId: string;
   data: DateItemType[];
+  model: string;
   mode: `${TrainingModeEnum}`;
   prompt?: string;
 };
@@ -25,16 +25,28 @@ export type Response = {
 
 const modeMaxToken = {
   [TrainingModeEnum.index]: 6000,
-  [TrainingModeEnum.qa]: 10000
+  [TrainingModeEnum.qa]: 12000
 };
 
 export default withNextCors(async function handler(req: NextApiRequest, res: NextApiResponse<any>) {
   try {
-    const { kbId, data, mode, prompt } = req.body as Props;
+    const { kbId, data, mode, prompt, model = 'text-embedding-ada-002' } = req.body as Props;
 
-    if (!kbId || !Array.isArray(data)) {
+    if (!kbId || !Array.isArray(data) || !model) {
       throw new Error('缺少参数');
     }
+
+    // auth model
+    if (mode === TrainingModeEnum.qa && !global.qaModels.find((item) => item.model === model)) {
+      throw new Error('不支持的 QA 拆分模型');
+    }
+    if (
+      mode === TrainingModeEnum.index &&
+      !global.vectorModels.find((item) => item.model === model)
+    ) {
+      throw new Error('不支持的向量生成模型');
+    }
+
     await connectToDatabase();
 
     // 凭证校验
@@ -46,7 +58,8 @@ export default withNextCors(async function handler(req: NextApiRequest, res: Nex
         data,
         userId,
         mode,
-        prompt
+        prompt,
+        model
       })
     });
   } catch (err) {
@@ -62,7 +75,8 @@ export async function pushDataToKb({
   kbId,
   data,
   mode,
-  prompt
+  prompt,
+  model
 }: { userId: string } & Props): Promise<Response> {
   await authKb({
     userId,
@@ -76,15 +90,14 @@ export async function pushDataToKb({
   data.forEach((item) => {
     const text = item.q + item.a;
 
-    if (mode === TrainingModeEnum.qa) {
-      // count token
-      const token = modelToolMap.countTokens({
-        model: OpenAiChatEnum.GPT3516k,
-        messages: [{ obj: 'System', value: item.q }]
-      });
-      if (token > modeMaxToken[TrainingModeEnum.qa]) {
-        return;
-      }
+    // count token
+    const token = modelToolMap.countTokens({
+      model: 'gpt-3.5-turbo',
+      messages: [{ obj: 'System', value: item.q }]
+    });
+
+    if (token > modeMaxToken[TrainingModeEnum.qa]) {
+      return;
     }
 
     if (!set.has(text)) {
@@ -116,7 +129,7 @@ export async function pushDataToKb({
         try {
           const { rows } = await PgClient.query(`
             SELECT COUNT(*) > 0 AS exists
-            FROM  modelData 
+            FROM  ${PgTrainingTableName} 
             WHERE md5(q)=md5('${q}') AND md5(a)=md5('${a}') AND user_id='${userId}' AND kb_id='${kbId}'
           `);
           const exists = rows[0]?.exists || false;
@@ -144,6 +157,7 @@ export async function pushDataToKb({
     insertData.map((item) => ({
       q: item.q,
       a: item.a,
+      model,
       source: item.source,
       userId,
       kbId,
